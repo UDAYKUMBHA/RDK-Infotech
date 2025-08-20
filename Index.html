@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Book Scanner</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        html, body {
+            height: 100%;
+            overflow: hidden;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+        .shutter-button {
+            border: 5px solid white;
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background-color: rgba(245, 245, 245, 0.8);
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.2s;
+            outline: none;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            color: #333;
+            font-size: 2rem;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .shutter-button:active {
+            background-color: #ddd;
+            transform: scale(0.95);
+        }
+        #video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: -1;
+        }
+        /* Toggle Switch Styles */
+        .toggle-checkbox:checked {
+            right: 0;
+            border-color: #4A90E2;
+        }
+        .toggle-checkbox:checked + .toggle-label {
+            background-color: #4A90E2;
+        }
+        /* Modal Styles */
+        #info-modal {
+            transition: opacity 0.3s ease;
+        }
+    </style>
+</head>
+<body class="bg-black text-gray-800">
+
+    <div id="lot-entry-screen" class="container mx-auto p-4 max-w-md h-full flex items-center justify-center">
+        <div class="bg-white p-8 rounded-xl shadow-lg w-full">
+            <h1 class="text-3xl font-bold text-center text-blue-600 mb-2">Book Scanner</h1>
+            <p class="text-center text-gray-600 mb-6">Enter the lot number to begin scanning.</p>
+            <div class="mb-4">
+                <label for="lot-number" class="block text-sm font-medium text-gray-700 mb-1">Lot Number</label>
+                <input type="text" id="lot-number" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="e.g., 123">
+            </div>
+            <div class="flex items-center justify-center mb-6">
+                <span class="text-gray-700 mr-3">Color</span>
+                <div class="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
+                    <input type="checkbox" name="toggle" id="color-toggle" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"/>
+                    <label for="color-toggle" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
+                </div>
+                <span class="text-gray-700 font-semibold">B&W</span>
+            </div>
+            <button id="start-scanning" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg shadow-md transition-transform transform hover:scale-105">
+                Start Scanning
+            </button>
+        </div>
+    </div>
+
+    <div id="scanning-screen" class="h-full w-full flex flex-col" style="display: none;">
+        <video id="video" autoplay playsinline></video>
+        <canvas id="canvas" style="display:none;"></canvas>
+        
+        <div class="absolute top-0 left-0 right-0 p-4 flex justify-end">
+             <button id="info-btn" class="bg-white/50 hover:bg-white/80 rounded-full p-2 shadow-lg">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-800" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            </button>
+        </div>
+
+        <div class="absolute bottom-0 left-0 right-0 p-6 flex justify-center">
+            <button id="snap" class="shutter-button">1</button>
+        </div>
+    </div>
+
+    <div id="info-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-gray-100 rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto p-6">
+            <div class="flex justify-between items-center border-b pb-3 mb-4">
+                <h2 class="text-2xl font-bold">Session Info</h2>
+                <button id="close-modal-btn" class="text-gray-500 hover:text-gray-800">&times;</button>
+            </div>
+            
+            <div class="mb-6">
+                 <h1 class="text-xl font-bold">Lot: <span id="display-lot-number" class="text-blue-600"></span></h1>
+                 <p class="text-md text-gray-600">Scanning Book: <span id="book-counter-display" class="font-semibold">1</span></p>
+            </div>
+
+            <div id="gallery" class="bg-white p-4 rounded-lg shadow-inner mb-6">
+                <h3 class="text-lg font-semibold mb-3">Current Book Pages</h3>
+                <div id="image-grid" class="grid grid-cols-3 gap-2"></div>
+                <p id="no-images-text" class="text-gray-500 text-sm">Scan 3 pages to create a PDF.</p>
+            </div>
+            
+            <div id="completed-pdfs" class="bg-white p-4 rounded-lg shadow-inner">
+                <h3 class="text-lg font-semibold mb-3">Completed PDFs</h3>
+                <ul id="pdf-list" class="list-disc list-inside text-gray-700 text-sm"></ul>
+                <p id="no-pdfs-text" class="text-gray-500 text-sm">No PDFs generated yet.</p>
+            </div>
+
+            <div class="mt-6">
+                <button id="new-lot-btn" class="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-3 px-4 rounded-lg">
+                    Start New Lot
+                </button>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        // DOM Elements
+        const lotEntryScreen = document.getElementById('lot-entry-screen');
+        const scanningScreen = document.getElementById('scanning-screen');
+        const lotNumberInput = document.getElementById('lot-number');
+        const startScanningBtn = document.getElementById('start-scanning');
+        const colorToggle = document.getElementById('color-toggle');
+        const displayLotNumber = document.getElementById('display-lot-number');
+        const bookCounterDisplay = document.getElementById('book-counter-display');
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const snapBtn = document.getElementById('snap');
+        const imageGrid = document.getElementById('image-grid');
+        const noImagesText = document.getElementById('no-images-text');
+        const pdfList = document.getElementById('pdf-list');
+        const noPdfsText = document.getElementById('no-pdfs-text');
+        const newLotBtn = document.getElementById('new-lot-btn');
+        const infoBtn = document.getElementById('info-btn');
+        const closeModalBtn = document.getElementById('close-modal-btn');
+        const infoModal = document.getElementById('info-modal');
+
+
+        // App State
+        let lotNumber = '';
+        let bookCounter = 1;
+        let currentBookPages = [];
+        let isBlackAndWhiteMode = true; // Default to B&W
+        let stream;
+
+        // --- Initialization ---
+        colorToggle.checked = false; // Set toggle to Color on load for better clarity
+        colorToggle.addEventListener('change', () => {
+            isBlackAndWhiteMode = colorToggle.checked;
+        });
+
+        startScanningBtn.addEventListener('click', () => {
+            const inputLot = lotNumberInput.value.trim();
+            if (inputLot) {
+                lotNumber = inputLot;
+                document.getElementById('display-lot-number').textContent = lotNumber;
+                lotEntryScreen.style.display = 'none';
+                scanningScreen.style.display = 'flex';
+                startCamera();
+            } else {
+                alert('Please enter a lot number.');
+            }
+        });
+        
+        newLotBtn.addEventListener('click', () => {
+            location.reload();
+        });
+
+        infoBtn.addEventListener('click', () => {
+            infoModal.classList.remove('hidden');
+        });
+        closeModalBtn.addEventListener('click', () => {
+            infoModal.classList.add('hidden');
+        });
+        infoModal.addEventListener('click', (e) => {
+            if (e.target === infoModal) {
+                 infoModal.classList.add('hidden');
+            }
+        });
+
+
+        async function startCamera() {
+            try {
+                if (stream) {
+                    stream.getTracks().forEach(track => track.stop());
+                }
+                stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { 
+                        facingMode: 'environment',
+                        width: { ideal: 4096 }, // Request higher resolution for clarity
+                        height: { ideal: 2160 }
+                    } 
+                });
+                video.srcObject = stream;
+            } catch (err) {
+                console.error("Error accessing camera: ", err);
+                alert('Could not access the camera. Please ensure you have given permission and are using a secure (https) connection.');
+            }
+        }
+
+        // --- Image Capturing ---
+        snapBtn.addEventListener('click', () => {
+            if (currentBookPages.length >= 3) return;
+
+            const videoWidth = video.videoWidth;
+            const videoHeight = video.videoHeight;
+            
+            // Set canvas size for cropping
+            const cropPercentage = 0.05; // Crop 5% from each side
+            const croppedWidth = videoWidth * (1 - 2 * cropPercentage);
+            const croppedHeight = videoHeight * (1 - 2 * cropPercentage);
+            const croppedX = videoWidth * cropPercentage;
+            const croppedY = videoHeight * cropPercentage;
+
+            canvas.width = croppedWidth;
+            canvas.height = croppedHeight;
+            const context = canvas.getContext('2d');
+            
+            // Draw the cropped portion of the video onto the canvas
+            context.drawImage(video, croppedX, croppedY, croppedWidth, croppedHeight, 0, 0, croppedWidth, croppedHeight);
+            
+            if (isBlackAndWhiteMode) {
+                const imageData = context.getImageData(0, 0, croppedWidth, croppedHeight);
+                const data = imageData.data;
+                const threshold = 128;
+                for (let i = 0; i < data.length; i += 4) {
+                    const luminance = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+                    const color = luminance < threshold ? 0 : 255;
+                    data[i] = color;
+                    data[i + 1] = color;
+                    data[i + 2] = color;
+                }
+                context.putImageData(imageData, 0, 0);
+            }
+
+            // Use maximum quality for JPEG
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.8); // Reduced quality for smaller file size
+            currentBookPages.push(dataUrl);
+            updateGallery();
+
+            if (currentBookPages.length === 3) {
+                setTimeout(generatePdfForCurrentBook, 500);
+            }
+        });
+
+        // --- UI Updates ---
+        function updateGallery() {
+            imageGrid.innerHTML = '';
+            const pageNumber = currentBookPages.length + 1;
+            
+            if (currentBookPages.length > 0) {
+                noImagesText.style.display = 'none';
+            } else {
+                noImagesText.style.display = 'block';
+            }
+
+            currentBookPages.forEach(src => {
+                const img = document.createElement('img');
+                img.src = src;
+                img.className = 'w-full h-auto rounded-md shadow-sm';
+                imageGrid.appendChild(img);
+            });
+            
+             if (pageNumber > 3) {
+                snapBtn.textContent = "✓";
+                snapBtn.disabled = true;
+            } else {
+                snapBtn.textContent = pageNumber;
+                snapBtn.disabled = false;
+            }
+        }
+
+        // --- PDF Generation and Workflow ---
+        async function generatePdfForCurrentBook() {
+            if (currentBookPages.length !== 3) return;
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({
+                orientation: 'portrait',
+                unit: 'mm',
+                format: 'a4'
+            });
+
+            for (let i = 0; i < currentBookPages.length; i++) {
+                if (i > 0) {
+                    doc.addPage();
+                }
+                const imgData = currentBookPages[i];
+                const imgProps = doc.getImageProperties(imgData);
+                const pdfWidth = doc.internal.pageSize.getWidth();
+                const pdfHeight = doc.internal.pageSize.getHeight();
+                const ratio = Math.min(pdfWidth / imgProps.width, pdfHeight / imgProps.height);
+                
+                const imgWidth = imgProps.width * ratio;
+                const imgHeight = imgProps.height * ratio;
+                const x = (pdfWidth - imgWidth) / 2;
+                const y = (pdfHeight - imgHeight) / 2;
+
+                doc.addImage(imgData, 'JPEG', x, y, imgWidth, imgHeight);
+            }
+
+            const paddedBookNumber = String(bookCounter).padStart(3, '0');
+            const filename = `LOT${lotNumber}_${paddedBookNumber}.pdf`;
+            doc.save(filename);
+            
+            addPdfToCompletedList(filename);
+            resetForNextBook();
+        }
+
+        function addPdfToCompletedList(filename) {
+            noPdfsText.style.display = 'none';
+            const li = document.createElement('li');
+            li.textContent = filename;
+            pdfList.appendChild(li);
+        }
+
+        function resetForNextBook() {
+            bookCounter++;
+            currentBookPages = [];
+            document.getElementById('book-counter-display').textContent = bookCounter;
+            updateGallery();
+        }
+
+    </script>
+</body>
+</html>
