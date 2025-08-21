@@ -44,14 +44,6 @@
             left: 0;
             z-index: -1;
         }
-        /* Toggle Switch Styles */
-        .toggle-checkbox:checked {
-            right: 0;
-            border-color: #4A90E2;
-        }
-        .toggle-checkbox:checked + .toggle-label {
-            background-color: #4A90E2;
-        }
         /* Modal Styles */
         #info-modal {
             transition: opacity 0.3s ease;
@@ -67,14 +59,6 @@
             <div class="mb-4">
                 <label for="lot-number" class="block text-sm font-medium text-gray-700 mb-1">Lot Number</label>
                 <input type="text" id="lot-number" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="e.g., 123">
-            </div>
-            <div class="flex items-center justify-center mb-6">
-                <span class="text-gray-700 mr-3">Color</span>
-                <div class="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
-                    <input type="checkbox" name="toggle" id="color-toggle" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"/>
-                    <label for="color-toggle" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
-                </div>
-                <span class="text-gray-700 font-semibold">B&W</span>
             </div>
             <button id="start-scanning" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg shadow-md transition-transform transform hover:scale-105">
                 Start Scanning
@@ -138,7 +122,6 @@
         const scanningScreen = document.getElementById('scanning-screen');
         const lotNumberInput = document.getElementById('lot-number');
         const startScanningBtn = document.getElementById('start-scanning');
-        const colorToggle = document.getElementById('color-toggle');
         const displayLotNumber = document.getElementById('display-lot-number');
         const bookCounterDisplay = document.getElementById('book-counter-display');
         const video = document.getElementById('video');
@@ -153,20 +136,13 @@
         const closeModalBtn = document.getElementById('close-modal-btn');
         const infoModal = document.getElementById('info-modal');
 
-
         // App State
         let lotNumber = '';
         let bookCounter = 1;
         let currentBookPages = [];
-        let isBlackAndWhiteMode = true; // Default to B&W
         let stream;
 
         // --- Initialization ---
-        colorToggle.checked = false; // Set toggle to Color on load for better clarity
-        colorToggle.addEventListener('change', () => {
-            isBlackAndWhiteMode = colorToggle.checked;
-        });
-
         startScanningBtn.addEventListener('click', () => {
             const inputLot = lotNumberInput.value.trim();
             if (inputLot) {
@@ -196,7 +172,6 @@
             }
         });
 
-
         async function startCamera() {
             try {
                 if (stream) {
@@ -205,7 +180,7 @@
                 stream = await navigator.mediaDevices.getUserMedia({ 
                     video: { 
                         facingMode: 'environment',
-                        width: { ideal: 4096 }, // Request higher resolution for clarity
+                        width: { ideal: 4096 }, 
                         height: { ideal: 2160 }
                     } 
                 });
@@ -216,15 +191,15 @@
             }
         }
 
-        // --- Image Capturing ---
+        // --- Image Capturing (Color only) ---
         snapBtn.addEventListener('click', () => {
             if (currentBookPages.length >= 3) return;
 
             const videoWidth = video.videoWidth;
             const videoHeight = video.videoHeight;
             
-            // Set canvas size for cropping
-            const cropPercentage = 0.05; // Crop 5% from each side
+            // Crop 5% from each side
+            const cropPercentage = 0.05;
             const croppedWidth = videoWidth * (1 - 2 * cropPercentage);
             const croppedHeight = videoHeight * (1 - 2 * cropPercentage);
             const croppedX = videoWidth * cropPercentage;
@@ -234,25 +209,10 @@
             canvas.height = croppedHeight;
             const context = canvas.getContext('2d');
             
-            // Draw the cropped portion of the video onto the canvas
             context.drawImage(video, croppedX, croppedY, croppedWidth, croppedHeight, 0, 0, croppedWidth, croppedHeight);
-            
-            if (isBlackAndWhiteMode) {
-                const imageData = context.getImageData(0, 0, croppedWidth, croppedHeight);
-                const data = imageData.data;
-                const threshold = 128;
-                for (let i = 0; i < data.length; i += 4) {
-                    const luminance = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
-                    const color = luminance < threshold ? 0 : 255;
-                    data[i] = color;
-                    data[i + 1] = color;
-                    data[i + 2] = color;
-                }
-                context.putImageData(imageData, 0, 0);
-            }
 
-            // Use maximum quality for JPEG
-            const dataUrl = canvas.toDataURL('image/jpeg', 0.8); // Reduced quality for smaller file size
+            // Save as compressed JPEG
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
             currentBookPages.push(dataUrl);
             updateGallery();
 
@@ -288,7 +248,7 @@
             }
         }
 
-        // --- PDF Generation and Workflow ---
+        // --- PDF Generation ---
         async function generatePdfForCurrentBook() {
             if (currentBookPages.length !== 3) return;
 
@@ -300,9 +260,7 @@
             });
 
             for (let i = 0; i < currentBookPages.length; i++) {
-                if (i > 0) {
-                    doc.addPage();
-                }
+                if (i > 0) doc.addPage();
                 const imgData = currentBookPages[i];
                 const imgProps = doc.getImageProperties(imgData);
                 const pdfWidth = doc.internal.pageSize.getWidth();
@@ -342,3 +300,5 @@
     </script>
 </body>
 </html>
+        
+            
