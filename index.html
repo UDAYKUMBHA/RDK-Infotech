@@ -78,18 +78,18 @@
             </button>
         </div>
 
-        <div class="absolute bottom-0 left-0 right-0 p-6 flex justify-center items-center">
-    <div class="flex-1 flex justify-start">
-        <button id="torch-btn" class="bg-white/50 hover:bg-white/80 rounded-full p-4 shadow-lg text-gray-800">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.5 10.5L21 3m-2.293 2.293a1 1 0 011.414 1.414l-7.5 7.5a1 1 0 01-1.414-1.414l7.5-7.5z" />
-            </svg>
-        </button>
-    </div>
+       <div class="absolute bottom-0 left-0 right-0 p-6 flex justify-between items-center">
+    <button id="torch-btn" class="bg-white/50 hover:bg-white/80 rounded-full p-4 shadow-lg text-gray-800">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.5 10.5L21 3m-2.293 2.293a1 1 0 011.414 1.414l-7.5 7.5a1 1 0 01-1.414-1.414l7.5-7.5z" />
+        </svg>
+    </button>
+    
     <button id="snap" class="shutter-button">1</button>
-    <div class="flex-1"></div>
+    
+    <button class="w-16 h-16 opacity-0 pointer-events-none"></button>
 </div>
-
+        
     <div id="info-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 hidden">
         <div class="bg-gray-100 rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto p-6">
             <div class="flex justify-between items-center border-b pb-3 mb-4">
