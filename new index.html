@@ -72,10 +72,10 @@
         
         <div class="absolute top-0 left-0 right-0 p-4 flex justify-end">
              <button id="info-btn" class="bg-white/50 hover:bg-white/80 rounded-full p-2 shadow-lg">
-                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-800" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                 </svg>
-             </button>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-800" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            </button>
         </div>
 
         <div class="absolute bottom-0 left-0 right-0 p-6 flex justify-center">
@@ -91,8 +91,8 @@
             </div>
             
             <div class="mb-6">
-                <h1 class="text-xl font-bold">Lot: <span id="display-lot-number" class="text-blue-600"></span></h1>
-                <p class="text-md text-gray-600">Scanning Book: <span id="book-counter-display" class="font-semibold">1</span></p>
+                 <h1 class="text-xl font-bold">Lot: <span id="display-lot-number" class="text-blue-600"></span></h1>
+                 <p class="text-md text-gray-600">Scanning Book: <span id="book-counter-display" class="font-semibold">1</span></p>
             </div>
 
             <div id="gallery" class="bg-white p-4 rounded-lg shadow-inner mb-6">
@@ -173,7 +173,6 @@
             }
         });
 
-
         async function startCamera() {
             try {
                 if (stream) {
@@ -182,8 +181,8 @@
                 stream = await navigator.mediaDevices.getUserMedia({ 
                     video: { 
                         facingMode: 'environment',
-                        width: { ideal: 4096 }, // Request higher resolution for clarity
-                        height: { ideal: 2160 }
+                        width: { ideal: 1280 }, // Lowered resolution for smaller file size
+                        height: { ideal: 720 }
                     } 
                 });
                 video.srcObject = stream;
@@ -192,30 +191,34 @@
                 alert('Could not access the camera. Please ensure you have given permission and are using a secure (https) connection.');
             }
         }
+        
+        function applyContrast(context, contrast) {
+            const imageData = context.getImageData(0, 0, context.canvas.width, context.canvas.height);
+            const data = imageData.data;
+            const factor = 259 * (contrast + 255) / (255 * (259 - contrast));
+            
+            for (let i = 0; i < data.length; i += 4) {
+                data[i] = factor * (data[i] - 128) + 128;
+                data[i + 1] = factor * (data[i + 1] - 128) + 128;
+                data[i + 2] = factor * (data[i + 2] - 128) + 128;
+            }
+            context.putImageData(imageData, 0, 0);
+        }
 
         // --- Image Capturing ---
         snapBtn.addEventListener('click', () => {
             if (currentBookPages.length >= 3) return;
 
-            const videoWidth = video.videoWidth;
-            const videoHeight = video.videoHeight;
-            
-            // Set canvas size for cropping
-            const cropPercentage = 0.05; // Crop 5% from each side
-            const croppedWidth = videoWidth * (1 - 2 * cropPercentage);
-            const croppedHeight = videoHeight * (1 - 2 * cropPercentage);
-            const croppedX = videoWidth * cropPercentage;
-            const croppedY = videoHeight * cropPercentage;
-
-            canvas.width = croppedWidth;
-            canvas.height = croppedHeight;
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
             const context = canvas.getContext('2d');
             
-            // Draw the cropped portion of the video onto the canvas
-            context.drawImage(video, croppedX, croppedY, croppedWidth, croppedHeight, 0, 0, croppedWidth, croppedHeight);
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
             
-            // Use maximum quality for JPEG
-            const dataUrl = canvas.toDataURL('image/jpeg', 0.8); // Reduced quality for smaller file size
+            // Apply a contrast filter to the color image
+            applyContrast(context, 100); // You can adjust the contrast value (e.g., from 0 to 255)
+
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
             currentBookPages.push(dataUrl);
             updateGallery();
 
