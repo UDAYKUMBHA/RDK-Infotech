@@ -285,11 +285,13 @@
                 imageGrid.appendChild(img);
             });
             
-             if (pageNumber > 3) {
-                snapBtn.disabled = true;
-            } else {
-              snapBtn.disabled = false;
-           }
+           if (pageNumber > 3) {
+    snapBtn.textContent = "✓";
+    snapBtn.disabled = true;
+} else {
+    snapBtn.textContent = pageNumber;
+    snapBtn.disabled = false;
+}
         }
 
         // --- PDF Generation and Workflow ---
