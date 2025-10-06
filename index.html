@@ -216,12 +216,14 @@
                 if (stream) {
                     stream.getTracks().forEach(track => track.stop());
                 }
-                const constraints = { 
-                    video: { 
+               const constraints = {
+                    video: {
                         facingMode: 'environment',
-                        width: { ideal: 1280 }, 
-                        height: { ideal: 720 }
-                    } 
+                        width: { ideal: 1920 }, // Request Full HD width
+                        height: { ideal: 1080 }, // Request Full HD height
+                        // This is the key for sharp focus!
+                        focusMode: { ideal: 'continuous' } 
+                    }
                 };
                 
                 stream = await navigator.mediaDevices.getUserMedia(constraints);
@@ -256,8 +258,13 @@
             
             context.drawImage(video, 0, 0, canvas.width, canvas.height);
             
-            // Apply a contrast filter to the color image
-            applyContrast(context, 50); 
+        // Apply a clearer filter using the browser's engine
+            context.filter = 'contrast(1.4) brightness(1.1)';
+
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            // Reset the filter so it doesn't affect other canvas operations
+            context.filter = 'none';
 
             const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
             currentBookPages.push(dataUrl);
